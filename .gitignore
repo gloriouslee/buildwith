@@ -1,0 +1,7 @@
+.venv/
+.claude/
+__pycache__/
+*.py[cod]
+data/scans.db
+data/scans.db-shm
+data/scans.db-wal

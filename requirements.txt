@@ -1,0 +1,7 @@
+flask
+requests
+dnspython
+openpyxl
+truststore
+regex
+gunicorn

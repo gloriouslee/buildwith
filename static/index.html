@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tech Scanner</title>
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --ink:#1c2430; --mute:#667085; --line:#e3e7ee; --brand:#1f3a5f; --accent:#2f6fed;
+          --ok:#15733c; --okbg:#e5f6ec; --bad:#a8321f; --badbg:#fde4e1; --warn:#8a5a00; --warnbg:#fdf0d5; --gray:#eef1f5; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--brand); color:#fff; padding:12px 24px; display:flex; align-items:center; gap:16px; }
+  header h1 { font-size:17px; margin:0; font-weight:600; }
+  header .sub { color:#b9c6da; font-size:12px; margin-left:auto; display:flex; gap:12px; align-items:center; }
+  header button { background:transparent; color:#fff; border:1px solid #5a7399; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:12px; }
+  main { display:grid; grid-template-columns:290px minmax(0,1fr); gap:16px; padding:16px 24px; max-width:1680px; margin:0 auto; }
+  @media (max-width:1000px) { main { grid-template-columns:1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin:0 0 10px; font-weight:600; }
+  h3 { font-size:15px; margin:0 0 8px; }
+  textarea { width:100%; height:210px; resize:vertical; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:13px ui-monospace,Consolas,monospace; }
+  .btn { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:9px 14px; font-weight:600; cursor:pointer; width:100%; margin-top:8px; font-size:14px; }
+  .btn:disabled { background:#9db5e6; cursor:default; }
+  .btn.sec { background:#fff; color:var(--ink); border:1px solid var(--line); width:auto; margin:0; padding:7px 12px; font-weight:500; font-size:13px; }
+  .hint, .mute { color:var(--mute); } .small { font-size:12px; }
+  .hist { max-height:300px; overflow:auto; }
+  .hist div { padding:6px 8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; gap:8px; font-size:12.5px; }
+  .hist div:hover { background:#eef2f9; } .hist div.cur { background:#e3ebfb; }
+  .banner { border-radius:10px; padding:12px 16px; margin-bottom:14px; border:1px solid; }
+  .banner.run { background:#eaf1ff; border-color:#bcd0fb; color:#1b3d86; }
+  .banner.done { background:var(--okbg); border-color:#b7e2c5; color:var(--ok); }
+  .banner.err { background:var(--badbg); border-color:#f2b8b0; color:var(--bad); }
+  .progress { height:6px; background:#dfe6f3; border-radius:4px; overflow:hidden; margin-top:8px; }
+  .progress i { display:block; height:100%; background:var(--accent); transition:width .3s; }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid #9db5e6; border-top-color:var(--accent); border-radius:50%; animation:sp .8s linear infinite; vertical-align:-2px; margin-right:8px; }
+  .btn .spin { border-color:#ffffff88; border-top-color:#fff; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; }
+  .stat b { display:block; font-size:24px; line-height:1.2; } .stat span { color:var(--mute); font-size:12px; }
+  .vendors { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; margin-bottom:14px; }
+  .vcard { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--vc,#98a2b3); border-radius:10px; padding:10px 12px; cursor:pointer; }
+  .vcard:hover, .vcard.on { box-shadow:0 0 0 2px #cfdcfb; border-color:var(--accent); border-left-color:var(--vc,#98a2b3); }
+  .vcard .n { font-size:20px; font-weight:700; margin-right:6px; }
+  .vcard .bd { font-size:12px; color:var(--mute); }
+  details.legend { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:14px; }
+  details.legend summary { cursor:pointer; font-weight:600; }
+  .legend-grid { display:grid; grid-template-columns:170px 1fr; gap:6px 14px; margin-top:10px; font-size:13px; }
+  .toolbar { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+  .toolbar input[type=text], .toolbar select { border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-size:13px; background:#fff; }
+  .toolbar input[type=text] { flex:1; min-width:200px; }
+  .toolbar label { font-size:13px; display:flex; gap:6px; align-items:center; cursor:pointer; }
+  .tabs { display:flex; gap:4px; margin-bottom:12px; border-bottom:1px solid var(--line); }
+  .tab { padding:8px 14px; cursor:pointer; border-bottom:2px solid transparent; color:var(--mute); font-weight:500; }
+  .tab.on { color:var(--accent); border-color:var(--accent); }
+
+  /* chips: style = signal type, dot colour = vendor */
+  .chip { display:inline-flex; align-items:center; gap:5px; padding:1px 8px; margin:2px 4px 2px 0; border-radius:10px; font-size:12px; white-space:nowrap; border:1px solid transparent; background:#e9eef6; color:#1f2a37; }
+  .chip .dot { width:7px; height:7px; border-radius:50%; background:var(--vc,#98a2b3); flex:none; }
+  .chip .tag { font-size:10px; font-weight:700; letter-spacing:.02em; opacity:.75; }
+  .s-onsite { background:#e3ebfb; border-color:#c9d8f8; }
+  .s-tagmanager { background:#efe7fb; border-color:#dccbf5; }
+  .s-linked { background:#fff; border:1px dashed #7a8aa3; }
+  .s-dns { background:var(--gray); color:#3c4656; }
+  .s-verification { background:#fff; border:1px dotted #a2acbb; color:#667085; }
+  .s-implied { background:#fff; color:#667085; font-style:italic; border-color:#e3e7ee; }
+  .v-Adobe { --vc:#d93a2b } .v-Salesforce { --vc:#0b86c8 } .v-Sitecore { --vc:#e2531c } .v-HubSpot { --vc:#f07b3f }
+  .v-Oracle { --vc:#b0392e } .v-Optimizely { --vc:#3b5bdb } .v-Acquia { --vc:#0678be } .v-Microsoft { --vc:#2f7a43 }
+  .v-Google { --vc:#4a7ae8 } .v-Meta { --vc:#2a5fd6 } .v-SAP { --vc:#0a6ed1 } .v-Bloomreach { --vc:#ffb81c }
+  .badge { display:inline-block; font-size:11.5px; padding:1px 8px; border-radius:8px; font-weight:600; white-space:nowrap; }
+  .q-full { background:var(--okbg); color:var(--ok); } .q-thin { background:var(--warnbg); color:var(--warn); }
+  .q-blocked, .q-http_error { background:var(--badbg); color:var(--bad); } .q-unreachable { background:#e7e9ee; color:#475467; }
+  .lv { font-size:11px; font-weight:600; padding:0 6px; border-radius:6px; }
+  .lv-Cao { background:var(--okbg); color:var(--ok); } .lv-Trung { background:var(--warnbg); color:var(--warn); } .lv-Thấp { background:var(--badbg); color:var(--bad); }
+  .chg-add { background:var(--okbg); color:var(--ok); } .chg-rem { background:var(--badbg); color:var(--bad); text-decoration:line-through; }
+
+  /* domain report cards */
+  .dcard { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+  .dhead { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .dhead .dn { font-size:16px; font-weight:700; }
+  .dhead .tt { color:var(--mute); font-size:12.5px; width:100%; margin-top:-4px; }
+  .dhead .more { margin-left:auto; }
+  .dbody { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:16px; }
+  @media (max-width:1250px) { .dbody { grid-template-columns:1fr; } }
+  .dbody ul { margin:0; padding-left:18px; } .dbody li { margin:2px 0; }
+  .grp { margin-bottom:6px; } .grp > .gl { font-size:11.5px; color:var(--mute); font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+  .org { display:inline-block; font:12px ui-monospace,Consolas,monospace; background:#e6f3fb; color:#075985; border-radius:6px; padding:1px 7px; margin-right:6px; }
+
+  table { width:100%; border-collapse:collapse; background:#fff; }
+  th { text-align:left; font-size:12px; color:var(--mute); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line); background:#fafbfc; position:sticky; top:0; z-index:1; }
+  td { padding:8px 10px; border-bottom:1px solid #eef0f4; vertical-align:top; }
+  .tablewrap { background:#fff; border:1px solid var(--line); border-radius:10px; overflow:auto; max-height:calc(100vh - 260px); }
+  tr.click { cursor:pointer; } tr.click:hover td { background:#f7f9fd; }
+  .empty { text-align:center; color:var(--mute); padding:50px 0; }
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+  code { font:12px ui-monospace,Consolas,monospace; background:#f3f5f8; padding:1px 5px; border-radius:4px; word-break:break-all; }
+
+  /* domain detail drawer */
+  #shade { position:fixed; inset:0; background:#0f172a55; display:none; z-index:20; }
+  #drawer { position:fixed; top:0; right:0; bottom:0; width:min(980px,96vw); background:var(--bg); z-index:21; overflow:auto; box-shadow:-8px 0 30px #0002; transform:translateX(100%); transition:transform .2s; }
+  #drawer.open { transform:none; } #shade.open { display:block; }
+  #drawer .top { position:sticky; top:0; background:var(--brand); color:#fff; padding:14px 20px; display:flex; gap:12px; align-items:center; z-index:2; }
+  #drawer .top b { font-size:17px; } #drawer .top button { margin-left:auto; background:transparent; color:#fff; border:1px solid #5a7399; border-radius:6px; padding:4px 12px; cursor:pointer; }
+  #drawer .content { padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+  .evl { margin:0; padding:0; list-style:none; } .evl li { margin:2px 0; font-size:12.5px; }
+  .evl .k { display:inline-block; min-width:118px; color:var(--mute); }
+  .vfoot { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px; }
+  .vfoot .vcard { cursor:default; } .vfoot li { font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tech Scanner</h1>
+  <span class="sub"><span id="info"></span><button id="updsig">Cập nhật signature</button></span>
+</header>
+<main>
+  <aside>
+    <div class="card">
+      <h2>Domain cần quét</h2>
+      <textarea id="domains" placeholder="Paste domain vào đây (mỗi dòng một domain, hoặc cách nhau bằng dấu phẩy / khoảng trắng).&#10;&#10;vd:&#10;vietcombank.com.vn&#10;https://www.yanmartractor.com/&#10;fpt.com"></textarea>
+      <button class="btn" id="go">Quét</button>
+      <div class="hint small" id="count">0 domain</div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Lịch sử quét</h2>
+      <div class="hist" id="hist"></div>
+    </div>
+  </aside>
+  <section id="report"><div class="card empty">Paste danh sách domain rồi bấm <b>Quét</b> để tạo báo cáo.</div></section>
+</main>
+<div id="shade"></div>
+<aside id="drawer"></aside>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const SIG_TAG = {onsite:"", tagmanager:"TM", linked:"↗ LINK", dns:"DNS", verification:"TXT", implied:"?"};
+const MAIN_GROUPS = ["platform", "martech", "crm", "email"];
+let scan = null, tab = "cards", vendorFilter = "", openDomain = null, timer = null, clock = null, startedAt = 0;
+const ui = {q: "", group: "", onsiteOnly: false};
+
+function parseCount(t) { return new Set(t.split(/[\s,;]+/).map(x => x.trim()).filter(x => x.includes("."))).size; }
+$("#domains").addEventListener("input", e => $("#count").textContent = parseCount(e.target.value) + " domain");
+
+async function loadInfo() {
+  const i = await (await fetch("/api/info")).json();
+  $("#info").textContent = `${i.technologies.toLocaleString("vi-VN")} công nghệ (${i.community} cộng đồng + ${i.curated} tự soạn)`;
+}
+$("#updsig").onclick = async () => {
+  const b = $("#updsig"); b.disabled = true; b.textContent = "Đang tải...";
+  const r = await fetch("/api/signatures/update", {method:"POST"});
+  b.disabled = false; b.textContent = "Cập nhật signature";
+  if (!r.ok) alert("Lỗi: " + (await r.json()).error); else loadInfo();
+};
+
+/* ------------------------------------------------------------ scanning */
+function setBusy(busy) { const b = $("#go"); b.disabled = busy; b.innerHTML = busy ? '<span class="spin"></span>Đang quét...' : "Quét"; }
+function showBanner(html, cls) { $("#report").innerHTML = `<div class="banner ${cls}">${html}</div>`; }
+
+$("#go").onclick = async () => {
+  const n = parseCount($("#domains").value);
+  if (!n) return showBanner("<b>Chưa có domain hợp lệ.</b> Hãy paste ít nhất một domain.", "err");
+  setBusy(true);
+  showBanner(`<span class="spin"></span><b>Đang gửi ${n} domain...</b>`, "run");
+  try {
+    const r = await fetch("/api/scans", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({domains:$("#domains").value})});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Lỗi server");
+    open_(j.id, true);
+  } catch (e) { setBusy(false); showBanner(`<b>Không bắt đầu được:</b> ${esc(e.message)}`, "err"); }
+};
+
+function open_(id, fresh) {
+  clearInterval(timer); clearInterval(clock); vendorFilter = ""; scan = null; closeDrawer();
+  startedAt = Date.now();
+  if (fresh) clock = setInterval(updateBanner, 500);
+  let lastDone = -1;
+  const tick = async () => {
+    try {
+      const r = await fetch("/api/scans/" + id);
+      if (!r.ok) return;
+      scan = await r.json();
+      if (scan.done !== lastDone || scan.status !== "running") { lastDone = scan.done; render(); loadHist(); }
+      if (scan.status !== "running") { clearInterval(timer); clearInterval(clock); setBusy(false); }
+    } catch (e) { /* server briefly unreachable: keep polling */ }
+  };
+  tick(); timer = setInterval(tick, 1000);
+}
+
+function updateBanner() {
+  const el = $("#banner"); if (!el || !scan || scan.status !== "running") return;
+  const s = Math.round((Date.now() - startedAt) / 1000);
+  const warm = scan.done === 0 ? `<div class="small">Đang khởi động bộ nhận diện (lần quét đầu tiên mất khoảng 10 giây)...</div>` : "";
+  el.innerHTML = `<span class="spin"></span><b>Đang quét: ${scan.done}/${scan.total} domain</b> · ${s}s · mỗi domain gồm trang chủ, tối đa 5 trang con, tag manager và DNS${warm}
+    <div class="progress"><i style="width:${scan.total ? Math.round(scan.done / scan.total * 100) : 0}%"></i></div>`;
+}
+
+async function loadHist() {
+  const list = await (await fetch("/api/scans")).json();
+  $("#hist").innerHTML = list.map(s => `<div data-id="${s.id}" class="${scan && scan.id === s.id ? "cur" : ""}">
+    <span>${new Date(s.created_at * 1000).toLocaleString("vi-VN")}</span><small class="mute">${s.total} domain</small></div>`).join("") || '<span class="mute small">Chưa có</span>';
+  document.querySelectorAll("#hist div").forEach(d => d.onclick = () => open_(d.dataset.id));
+}
+
+/* ------------------------------------------------------------- helpers */
+const vcls = v => v ? `v-${String(v).replace(/[^\w]/g, "")}` : "";
+function chip(t, opts = {}) {
+  const tag = SIG_TAG[t.signal];
+  const title = `${t.signal_label}${t.level ? " · độ tin cậy " + t.level : ""}${t.categories?.length ? " · " + t.categories.join(", ") : ""}`;
+  const name = (t.name || "").replace(" (linked portal)", "");
+  return `<span class="chip s-${t.signal} ${vcls(t.vendor)}" title="${esc(title)}">${t.vendor ? '<span class="dot"></span>' : ""}${esc(name)}${tag ? `<span class="tag">${tag}</span>` : ""}${opts.extra || ""}</span>`;
+}
+const qbadge = q => `<span class="badge q-${q.key}" title="${esc(q.note)}">${esc(q.label)}</span>`;
+const lvl = l => `<span class="lv lv-${esc(l.split(" ")[0])}">${esc(l)}</span>`;
+function visibleTechs(a) {
+  return a.techs.filter(t => !ui.onsiteOnly || t.signal === "onsite" || t.signal === "tagmanager");
+}
+function matches(r) {
+  const a = r.analysis;
+  if (vendorFilter && !a.techs.some(t => t.vendor === vendorFilter)) return false;
+  if (ui.group && !a.techs.some(t => t.group === ui.group)) return false;
+  const q = ui.q.toLowerCase();
+  if (q && !r.domain.includes(q) && !a.techs.some(t => t.name.toLowerCase().includes(q))) return false;
+  return true;
+}
+function changesHtml(r) {
+  const ch = r.changes;
+  if (!ch) return '<span class="mute small">Lần đầu quét domain này</span>';
+  if (!ch.added.length && !ch.removed.length) return '<span class="mute small">Không đổi so với lần quét trước</span>';
+  return '<span class="small mute">So với lần trước: </span>' + ch.added.map(n => `<span class="chip chg-add">+ ${esc(n)}</span>`).join("") + ch.removed.map(n => `<span class="chip chg-rem">${esc(n)}</span>`).join("");
+}
+const orgsHtml = r => (r.salesforce_org_ids || []).map(o => `<span class="org" title="${esc(o.sources.join("\n"))}">SF Org ${esc(o.id)}</span>`).join("");
+
+/* -------------------------------------------------------------- render */
+function render() {
+  if (!scan) return;
+  const R = scan.results, A = scan.aggregate;
+  const q = A.quality;
+  const full = q["Đầy đủ"] || 0, weak = (q["Bị chặn"] || 0) + (q["Ít dữ liệu"] || 0) + Object.entries(q).filter(([k]) => k.startsWith("Lỗi HTTP")).reduce((s, [, v]) => s + v, 0);
+  const changed = R.filter(r => r.changes && (r.changes.added.length || r.changes.removed.length)).length;
+  const keyVendors = A.vendors.filter(v => v.key);
+
+  $("#report").innerHTML = `
+    ${scan.status === "running" ? `<div class="banner run" id="banner"></div>` :
+      scan.status === "done" ? `<div class="banner done"><b>Hoàn tất:</b> đã quét ${scan.total} domain${clock && startedAt ? ` trong ${Math.round((Date.now() - startedAt) / 1000)}s` : ""}. Bấm vào một domain để xem bằng chứng chi tiết.</div>` :
+      `<div class="banner err"><b>Lần quét này bị gián đoạn</b> (server khởi động lại) — chỉ có ${scan.done}/${scan.total} kết quả.</div>`}
+    <div class="stats">
+      <div class="stat"><b>${scan.done}/${scan.total}</b><span>Domain đã quét</span></div>
+      <div class="stat"><b style="color:var(--ok)">${full}</b><span>Quét đầy đủ</span></div>
+      <div class="stat"><b style="color:var(--warn)">${weak}</b><span>Bị chặn / ít dữ liệu (kết quả có thể thiếu)</span></div>
+      <div class="stat"><b>${q["Không truy cập được"] || 0}</b><span>Không truy cập được (chỉ DNS)</span></div>
+      <div class="stat"><b>${changed}</b><span>Có thay đổi so với lần quét trước</span></div>
+    </div>
+    ${keyVendors.length ? `<h2>Hãng chính phát hiện được</h2><div class="vendors">${keyVendors.map(v => {
+      const doms = Object.entries(v.domains), on = doms.filter(([, s]) => s === "onsite" || s === "tagmanager").length;
+      return `<div class="vcard ${vcls(v.vendor)} ${vendorFilter === v.vendor ? "on" : ""}" data-v="${esc(v.vendor)}">
+        <div><span class="n">${doms.length}</span><b>${esc(v.vendor)}</b> <span class="mute small">domain</span></div>
+        <div class="bd">${on} có trên website · ${doms.length - on} chỉ DNS / liên kết / xác thực</div></div>`;
+    }).join("")}</div>` : ""}
+    ${legendHtml(A)}
+    <div class="toolbar">
+      <input type="text" id="q" placeholder="Lọc theo domain hoặc tên công nghệ..." value="${esc(ui.q)}">
+      <select id="grp"><option value="">Mọi nhóm</option>${A.groups.map(g => `<option value="${g.key}" ${ui.group === g.key ? "selected" : ""}>${esc(g.label)}</option>`).join("")}</select>
+      <label><input type="checkbox" id="onsite" ${ui.onsiteOnly ? "checked" : ""}> Chỉ hiện tín hiệu có trên website</label>
+      ${vendorFilter ? `<span class="chip s-onsite ${vcls(vendorFilter)}"><span class="dot"></span>Hãng: ${esc(vendorFilter)} <a href="#" id="clearv">✕</a></span>` : ""}
+      <button class="btn sec" id="exp">Tải Excel</button>
+    </div>
+    <div class="tabs">
+      ${[["cards", "Báo cáo từng domain"], ["table", "Bảng so sánh"], ["vendors", "Theo hãng"], ["techs", "Theo công nghệ"]]
+        .map(([k, l]) => `<div class="tab ${tab === k ? "on" : ""}" data-t="${k}">${l}</div>`).join("")}
+    </div>
+    <div id="view"></div>`;
+
+  document.querySelectorAll(".vendors .vcard").forEach(b => b.onclick = () => { vendorFilter = vendorFilter === b.dataset.v ? "" : b.dataset.v; render(); });
+  document.querySelectorAll(".tab").forEach(t => t.onclick = () => { tab = t.dataset.t; render(); });
+  $("#q").oninput = e => { ui.q = e.target.value; drawView(); };
+  $("#grp").onchange = e => { ui.group = e.target.value; drawView(); };
+  $("#onsite").onchange = e => { ui.onsiteOnly = e.target.checked; drawView(); };
+  $("#exp").onclick = () => location.href = `/api/scans/${scan.id}/export`;
+  if ($("#clearv")) $("#clearv").onclick = e => { e.preventDefault(); vendorFilter = ""; render(); };
+  drawView(); updateBanner();
+}
+
+function legendHtml(A) {
+  const sample = k => chip({name: A.signals[k].label, signal: k, signal_label: A.signals[k].label, categories: []});
+  return `<details class="legend"><summary>Cách đọc báo cáo — mỗi công nghệ được ghi rõ phát hiện bằng cách nào</summary>
+    <div class="legend-grid">
+      ${Object.keys(A.signals).map(k => `<div>${sample(k)}</div><div>${esc(A.signals[k].help)}</div>`).join("")}
+      <div><b>Độ tin cậy</b></div><div>${Object.entries(A.levels).map(([k, v]) => `${lvl(k)} ${esc(v)}`).join("<br>")}</div>
+      <div><b>Chấm màu</b></div><div>Màu của hãng (Adobe đỏ, Salesforce xanh, Sitecore cam...). Rê chuột lên chip để xem nhóm và độ tin cậy.</div>
+      <div><b>Tình trạng quét</b></div><div>${qbadge({key:"full",label:"Đầy đủ",note:""})} ${qbadge({key:"thin",label:"Ít dữ liệu",note:""})} ${qbadge({key:"blocked",label:"Bị chặn",note:""})} ${qbadge({key:"unreachable",label:"Không truy cập được",note:""})} — domain bị chặn hoặc ít dữ liệu thường <b>thiếu</b> công nghệ: không phát hiện ≠ không dùng.</div>
+    </div></details>`;
+}
+
+function drawView() {
+  const rows = scan.results.filter(matches).sort((a, b) => a.domain.localeCompare(b.domain));
+  const v = $("#view");
+  if (tab === "cards") v.innerHTML = rows.map(cardHtml).join("") || '<div class="card empty">Không có domain phù hợp bộ lọc</div>';
+  else if (tab === "table") v.innerHTML = tableHtml(rows);
+  else if (tab === "vendors") v.innerHTML = vendorsHtml(rows);
+  else v.innerHTML = techsHtml(rows);
+  v.querySelectorAll("[data-d]").forEach(el => el.onclick = e => { if (e.target.closest("a")) return; openDrawer(el.dataset.d); });
+}
+
+function groupChips(a, g) {
+  return visibleTechs(a).filter(t => t.group === g).map(t => chip(t)).join("");
+}
+
+function cardHtml(r) {
+  const a = r.analysis;
+  const groupBlocks = MAIN_GROUPS.concat(["ads"]).map(g => {
+    const c = groupChips(a, g);
+    return c ? `<div class="grp"><div class="gl">${esc(a.techs.find(t => t.group === g).group_label)}</div>${c}</div>` : "";
+  }).join("");
+  const others = visibleTechs(a).filter(t => !MAIN_GROUPS.concat(["ads"]).includes(t.group)).length;
+  return `<div class="dcard">
+    <div class="dhead">
+      <span class="dn">${esc(r.domain)}</span>${qbadge(a.quality)}${orgsHtml(r)}
+      <button class="btn sec more" data-d="${esc(r.domain)}">Xem chi tiết & bằng chứng →</button>
+      <div class="tt">${esc(r.title || "")}${r.final_url ? ` · <a href="${esc(r.final_url)}" target="_blank" rel="noopener">${esc(r.final_url)}</a>` : ""}</div>
+    </div>
+    <div class="dbody">
+      <div><ul>${a.summary.map(s => `<li>${esc(s)}</li>`).join("")}</ul><div style="margin-top:6px">${changesHtml(r)}</div></div>
+      <div>${groupBlocks || '<span class="mute small">Không phát hiện công nghệ nào trong các nhóm chính.</span>'}
+        ${others ? `<div class="small mute">+ ${others} công nghệ hạ tầng, bảo mật, thư viện — xem chi tiết.</div>` : ""}</div>
+    </div></div>`;
+}
+
+function tableHtml(rows) {
+  const labels = {platform:"Nền tảng website", martech:"Martech & dữ liệu KH", crm:"CRM, bán hàng & CSKH", email:"Email, DNS & tài khoản"};
+  return `<div class="tablewrap"><table><thead><tr><th>Domain</th><th>Tình trạng</th>${MAIN_GROUPS.map(g => `<th>${labels[g]}</th>`).join("")}<th>Thay đổi</th></tr></thead><tbody>` +
+    (rows.map(r => {
+      const a = r.analysis, ch = r.changes;
+      const chg = !ch ? '<span class="mute small">lần đầu</span>' : (ch.added.length || ch.removed.length) ?
+        ch.added.map(n => `<span class="chip chg-add">+ ${esc(n)}</span>`).join("") + ch.removed.map(n => `<span class="chip chg-rem">${esc(n)}</span>`).join("") : '<span class="mute small">không đổi</span>';
+      return `<tr class="click" data-d="${esc(r.domain)}"><td><b>${esc(r.domain)}</b><div>${orgsHtml(r)}</div></td><td>${qbadge(a.quality)}</td>
+        ${MAIN_GROUPS.map(g => `<td>${groupChips(a, g) || '<span class="mute small">—</span>'}</td>`).join("")}<td>${chg}</td></tr>`;
+    }).join("") || `<tr><td colspan="7" class="empty">Không có kết quả</td></tr>`) + "</tbody></table></div>";
+}
+
+function vendorsHtml(rows) {
+  const set = new Set(rows.map(r => r.domain));
+  const list = scan.aggregate.vendors.map(v => ({...v, domains: Object.fromEntries(Object.entries(v.domains).filter(([d]) => set.has(d)))}))
+    .filter(v => Object.keys(v.domains).length && (!vendorFilter || v.vendor === vendorFilter));
+  return `<div class="tablewrap"><table><thead><tr><th>Hãng</th><th>Domain</th><th>Sản phẩm phát hiện (số domain)</th><th>Có trên website</th><th>Chỉ DNS / liên kết / xác thực</th></tr></thead><tbody>` +
+    (list.map(v => {
+      const doms = Object.entries(v.domains);
+      const on = doms.filter(([, s]) => s === "onsite" || s === "tagmanager").map(([d]) => d).sort();
+      const off = doms.filter(([d]) => !on.includes(d)).sort();
+      const prods = Object.entries(v.products).map(([p, ds]) => [p, Object.entries(ds).filter(([d]) => set.has(d))]).filter(([, ds]) => ds.length)
+        .sort((x, y) => y[1].length - x[1].length)
+        .map(([p, ds]) => { const sig = ds.some(([, s]) => s === "onsite") ? "onsite" : ds[0][1]; return chip({name: p, vendor: v.vendor, signal: sig, signal_label: "", categories: []}, {extra: `<b>${ds.length}</b>`}); }).join("");
+      const dl = (arr, sig) => arr.map(x => { const [d, s] = Array.isArray(x) ? x : [x, sig]; return `<a href="#" data-d="${esc(d)}">${esc(d)}</a>${s && s !== "onsite" && s !== "tagmanager" ? ` <span class="small mute">(${esc(scan.aggregate.signals[s].label.toLowerCase())})</span>` : ""}`; }).join("<br>");
+      return `<tr><td><span class="chip s-onsite ${vcls(v.vendor)}"><span class="dot"></span><b>${esc(v.vendor)}</b></span></td><td><b>${doms.length}</b></td>
+        <td>${prods}</td><td class="small">${dl(on) || '<span class="mute">—</span>'}</td><td class="small">${dl(off) || '<span class="mute">—</span>'}</td></tr>`;
+    }).join("") || `<tr><td colspan="5" class="empty">Không có kết quả</td></tr>`) + "</tbody></table></div>";
+}
+
+function techsHtml(rows) {
+  const set = new Set(rows.map(r => r.domain)), q = ui.q.toLowerCase();
+  const list = scan.aggregate.techs.map(t => ({...t, domains: Object.entries(t.domains).filter(([d, s]) => set.has(d) && (!ui.onsiteOnly || s === "onsite" || s === "tagmanager"))}))
+    .filter(t => t.domains.length && (!ui.group || t.group === ui.group) && (!vendorFilter || t.vendor === vendorFilter) && (!q || t.name.toLowerCase().includes(q) || t.domains.some(([d]) => d.includes(q))));
+  return `<div class="tablewrap"><table><thead><tr><th>Công nghệ</th><th>Nhóm</th><th>Số domain</th><th>Domains (cách phát hiện)</th></tr></thead><tbody>` +
+    (list.map(t => {
+      const sig = t.domains.some(([, s]) => s === "onsite") ? "onsite" : t.domains[0][1];
+      return `<tr><td>${chip({...t, signal: sig, signal_label: ""})}</td><td class="small">${esc(t.group_label)}<div class="mute">${esc(t.categories.join(", "))}</div></td><td><b>${t.domains.length}</b></td>
+        <td class="small">${t.domains.sort().map(([d, s]) => `<a href="#" data-d="${esc(d)}">${esc(d)}</a>${s !== "onsite" ? ` <span class="mute">(${esc(scan.aggregate.signals[s].label.toLowerCase())})</span>` : ""}`).join(" · ")}</td></tr>`;
+    }).join("") || `<tr><td colspan="4" class="empty">Không có kết quả</td></tr>`) + "</tbody></table></div>";
+}
+
+/* -------------------------------------------------------------- drawer */
+function closeDrawer() { openDomain = null; $("#drawer").classList.remove("open"); $("#shade").classList.remove("open"); }
+$("#shade").onclick = closeDrawer;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+
+function openDrawer(domain) {
+  const r = scan.results.find(x => x.domain === domain); if (!r) return;
+  openDomain = domain;
+  const a = r.analysis, A = scan.aggregate;
+  const byGroup = {};
+  a.techs.forEach(t => (byGroup[t.group] = byGroup[t.group] || []).push(t));
+  const groupsHtml = A.groups.filter(g => byGroup[g.key]).map(g => `
+    <div class="card"><h3>${esc(g.label)} <span class="mute small">(${byGroup[g.key].length})</span></h3>
+      <table><thead><tr><th style="width:24%">Công nghệ</th><th style="width:16%">Cách phát hiện</th><th style="width:10%">Độ tin cậy</th><th>Bằng chứng</th></tr></thead><tbody>
+      ${byGroup[g.key].map(t => `<tr><td>${chip(t)}<div class="small mute">${esc(t.vendor || "")}${t.vendor && t.categories.length ? " · " : ""}${esc(t.categories.join(", "))}</div></td>
+        <td class="small">${esc(t.signal_label)}${t.where.length ? `<div class="mute">${esc(t.where.join(", "))}</div>` : ""}${t.via.length ? `<div class="mute">${esc(t.via.join(", "))}</div>` : ""}</td>
+        <td>${lvl(t.level)}</td>
+        <td><ul class="evl">${t.evidence.map(e => `<li><span class="k">${esc(e.label)}${e.page ? ` · ${esc(e.page)}` : ""}${e.via ? ` · ${esc(e.via)}` : ""}</span> <code>${esc(e.value)}</code></li>`).join("")}</ul></td></tr>`).join("")}
+      </tbody></table></div>`).join("");
+  const vf = a.vendors.filter(v => v.key);
+  const dns = Object.entries(r.dns || {}).filter(([, v]) => v.length);
+  $("#drawer").innerHTML = `
+    <div class="top"><b>${esc(r.domain)}</b>${qbadge(a.quality)}<button onclick="closeDrawer()">Đóng ✕</button></div>
+    <div class="content">
+      <div class="card"><h2>Tóm tắt</h2>
+        <div class="small mute" style="margin-bottom:6px">${esc(r.title || "")}${r.final_url ? ` · <a href="${esc(r.final_url)}" target="_blank" rel="noopener">${esc(r.final_url)}</a>` : ""}</div>
+        <ul>${a.summary.map(s => `<li>${esc(s)}</li>`).join("")}</ul>
+        <div style="margin-top:8px">${changesHtml(r)}</div></div>
+      <div class="card"><h2>Tình trạng quét</h2>
+        <p style="margin:0 0 6px">${qbadge(a.quality)} ${esc(a.quality.note)}</p>
+        <div class="small"><b>Trang đã quét:</b><br>${(r.pages || []).map((p, i) => `${i ? "Trang con" : "Trang chủ"}: <a href="${esc(p)}" target="_blank" rel="noopener">${esc(p)}</a>`).join("<br>") || '<span class="mute">—</span>'}</div>
+        ${(r.pages_failed || []).length ? `<div class="small" style="margin-top:6px"><b>Không tải được:</b><br>${r.pages_failed.map(p => `${esc(p.url)} <span class="mute">(${esc(p.reason)})</span>`).join("<br>")}</div>` : ""}
+        ${(r.containers || []).length ? `<div class="small" style="margin-top:6px"><b>Tag manager đã đọc:</b> ${esc(r.containers.join(", "))}</div>` : ""}
+      </div>
+      ${(r.salesforce_org_ids || []).length ? `<div class="card"><h2>Salesforce Org ID</h2>${r.salesforce_org_ids.map(o => `<div style="margin-bottom:4px"><span class="org">${esc(o.id)}</span><ul class="evl" style="margin-top:4px">${o.sources.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>`).join("")}
+        <div class="small mute">Org ID là định danh tổ chức Salesforce. Cùng một Org ID trên nhiều domain nghĩa là chúng dùng chung một Salesforce org.</div></div>` : ""}
+      ${vf.length ? `<div class="card"><h2>Hãng chính</h2><div class="vfoot">${vf.map(v => `<div class="vcard ${vcls(v.vendor)}"><b>${esc(v.vendor)}</b>
+        <ul style="margin:4px 0 0;padding-left:18px">${v.products.map(p => `<li>${esc(p.phrase)}</li>`).join("")}</ul></div>`).join("")}</div></div>` : ""}
+      ${groupsHtml || '<div class="card mute">Không phát hiện công nghệ nào.</div>'}
+      ${dns.length ? `<div class="card"><h2>Bản ghi DNS</h2><table><tbody>${dns.map(([k, vals]) => `<tr><td style="width:80px"><b>${esc(k)}</b></td><td>${vals.map(v => `<code>${esc(v)}</code>`).join("<br>")}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    </div>`;
+  $("#drawer").classList.add("open"); $("#shade").classList.add("open"); $("#drawer").scrollTop = 0;
+}
+
+loadInfo(); loadHist();
+</script>
+</body>
+</html>
