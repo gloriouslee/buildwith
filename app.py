@@ -28,6 +28,8 @@ APP_USERNAME = os.environ.get("APP_USERNAME", "buildwith")
 def require_authentication():
     """Protect the public deployment; local development stays password-free."""
     if not APP_PASSWORD:
+        if os.environ.get("RAILWAY_SERVICE_NAME"):
+            return jsonify(error="APP_PASSWORD must be configured before serving requests"), 503
         return None
     auth = request.authorization
     if (auth and hmac.compare_digest(auth.username or "", APP_USERNAME)
