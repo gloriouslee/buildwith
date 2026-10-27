@@ -1,6 +1,8 @@
 """Internal technology-lookup tool: paste domains, get a technology report."""
 import io
+import hmac
 import multiprocessing
+import os
 import threading
 import time
 import uuid
@@ -18,6 +20,22 @@ from detector import Detector
 from scanner import init_worker, parse_domains, scan_in_worker
 
 app = Flask(__name__, static_folder="static")
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+APP_USERNAME = os.environ.get("APP_USERNAME", "buildwith")
+
+
+@app.before_request
+def require_authentication():
+    """Protect the public deployment; local development stays password-free."""
+    if not APP_PASSWORD:
+        return None
+    auth = request.authorization
+    if (auth and hmac.compare_digest(auth.username or "", APP_USERNAME)
+            and hmac.compare_digest(auth.password or "", APP_PASSWORD)):
+        return None
+    return jsonify(error="authentication required"), 401, {"WWW-Authenticate": 'Basic realm="BuildWith"'}
+
+
 detector = None  # main-process copy, only used for /api/info
 # Worker processes re-import this module under multiprocessing's spawn; skip one-time setup there.
 if multiprocessing.current_process().name == "MainProcess":
