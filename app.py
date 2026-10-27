@@ -28,7 +28,7 @@ APP_USERNAME = os.environ.get("APP_USERNAME", "buildwith")
 def require_authentication():
     """Protect the public deployment; local development stays password-free."""
     if not APP_PASSWORD:
-        if os.environ.get("RAILWAY_SERVICE_NAME"):
+        if os.environ.get("RAILWAY_SERVICE_NAME") or os.environ.get("RENDER_SERVICE_ID"):
             return jsonify(error="APP_PASSWORD must be configured before serving requests"), 503
         return None
     auth = request.authorization
@@ -46,7 +46,7 @@ if multiprocessing.current_process().name == "MainProcess":
 pool_lock = threading.Lock()
 POOL = None
 JOBS = {}  # scan_id -> live scan dict (while running)
-WORKERS = 6  # CPU-bound regex matching: processes, not threads (GIL)
+WORKERS = int(os.environ.get("WORKERS", "6"))  # CPU-bound regex matching: processes, not threads (GIL)
 
 
 def _ts(epoch):
